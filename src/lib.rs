@@ -1,12 +1,19 @@
-use std::sync::{Arc, Mutex};
+use self::fmt::{Format, Fragment, Variable};
+use std::{
+	str::FromStr,
+	sync::{Arc, Mutex},
+};
 use steel::{
 	declare_module,
 	rvals::Custom,
 	steel_vm::ffi::{FFIModule, RegisterFFIFn},
 };
 
+mod fmt;
+
 declare_module!(module);
 
+#[derive(Clone)]
 struct GitRepo(Arc<Mutex<gix::Repository>>);
 
 impl Custom for GitRepo {}
@@ -19,7 +26,7 @@ impl GitRepo {
 		GitRepo(Arc::new(Mutex::new(repo)))
 	}
 
-	fn blame(&self, file: &str, line: isize) -> Option<String> {
+	fn blame(self, format: Format, file: &str, line: isize) -> Option<String> {
 		let repo = self.0.lock().ok()?;
 		let head = repo.head().ok()?.peel_to_object().ok()?.id;
 
@@ -40,13 +47,52 @@ impl GitRepo {
 		let author = author.name;
 
 		let message = thing.message().unwrap();
-		let message = message.title.to_string();
-		let message = message.trim();
+		let title = message.title.to_string();
+		let title = title.trim();
 
-		let time = thing.author().unwrap().time().unwrap();
-		let time = time.format(gix::date::time::format::ISO8601).unwrap();
+		let date = thing.author().unwrap().time().unwrap();
+		let date = date.format(gix::date::time::format::SHORT).unwrap();
 
-		Some(format!("{author}, {time} • {message} • {hash}"))
+		let info = Info {
+			hash: hash.to_string(),
+			author: Some(author.to_string()),
+			title: Some(title.to_owned()),
+			date: Some(date),
+		};
+
+		Some(info.format(format))
+	}
+}
+
+struct Info {
+	hash: String,
+	author: Option<String>,
+	title: Option<String>,
+	date: Option<String>,
+}
+
+impl Info {
+	fn get(&self, var: Variable) -> Option<&str> {
+		match var {
+			Variable::Hash => Some(&self.hash),
+			Variable::Author => self.author.as_deref(),
+			Variable::Title => self.title.as_deref(),
+			Variable::Date => self.date.as_deref(),
+		}
+	}
+
+	fn format(self, format: Format) -> String {
+		let mut string = String::new();
+
+		for fragment in &*format.0 {
+			match fragment {
+				Fragment::Verbatim(v) => string.push_str(v),
+				Fragment::Variable(v) if let Some(t) = self.get(*v) => string.push_str(t),
+				Fragment::Variable(_) => todo!(),
+			}
+		}
+
+		string
 	}
 }
 
@@ -55,6 +101,8 @@ fn module() -> FFIModule {
 
 	module
 		.register_fn("gix::discover", GitRepo::discover)
+		.register_fn("blame/default-format", Format::default)
+		.register_fn("blame/format", Format::from_str)
 		.register_fn("gix/blame", GitRepo::blame);
 
 	module
