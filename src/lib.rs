@@ -19,11 +19,11 @@ struct GitRepo(Arc<Mutex<gix::Repository>>);
 impl Custom for GitRepo {}
 
 impl GitRepo {
-	fn discover() -> Self {
+	fn discover() -> Option<Self> {
 		// TODO: pass path
-		let repo = gix::discover(".").unwrap();
+		let repo = gix::discover(".").ok()?;
 
-		GitRepo(Arc::new(Mutex::new(repo)))
+		Some(GitRepo(Arc::new(Mutex::new(repo))))
 	}
 
 	fn blame(self, format: Format, file: &str, line: isize) -> Option<String> {
@@ -34,30 +34,29 @@ impl GitRepo {
 			.blame_file(file.into(), head, gix::repository::blame_file::Options::default())
 			.ok()?;
 
-		let thing = blame.entries.into_iter().find(|blame| {
+		let entry = blame.entries.into_iter().find(|blame| {
 			(blame.start_in_source_file..blame.start_in_source_file + blame.len.get())
 				.contains(&(line as u32))
 		})?;
+		let commit = repo.find_commit(entry.commit_id).ok()?;
 
-		let thing = repo.find_commit(thing.commit_id).ok()?;
+		let hash = commit.short_id().map(|short| short.to_string());
+		let hash = hash.unwrap_or_else(|_| commit.id.to_string());
 
-		let hash = thing.short_id().unwrap();
+		let author = commit.author().map(|author| author.name.to_string()).ok();
 
-		let author = thing.author().unwrap();
-		let author = author.name;
+		let title = commit.message().map(|message| message.title.to_string()).ok();
+		// see <https://github.com/GitoxideLabs/gitoxide/issues/2991>
+		let title = title.map(|title| title.trim().to_owned());
 
-		let message = thing.message().unwrap();
-		let title = message.title.to_string();
-		let title = title.trim();
-
-		let date = thing.author().unwrap().time().unwrap();
-		let date = date.format(gix::date::time::format::SHORT).unwrap();
+		let date = commit.author().ok().and_then(|author| author.time().ok());
+		let date = date.and_then(|date| date.format(gix::date::time::format::SHORT).ok());
 
 		let info = Info {
 			hash: hash.to_string(),
-			author: Some(author.to_string()),
-			title: Some(title.to_owned()),
-			date: Some(date),
+			author,
+			title,
+			date,
 		};
 
 		Some(info.format(format))
@@ -88,7 +87,7 @@ impl Info {
 			match fragment {
 				Fragment::Verbatim(v) => string.push_str(v),
 				Fragment::Variable(v) if let Some(t) = self.get(*v) => string.push_str(t),
-				Fragment::Variable(_) => todo!(),
+				Fragment::Variable(_) => (),
 			}
 		}
 

@@ -12,3 +12,9 @@ abi_stable = "0.11.3"
 gix = { version = "0.87.1", default-features = false, features = ["sha1", "blame", "parallel"] }
 jiff = "0.2.35"
 steel-core = { version = "0.8.2", features = ["dylibs", "sync"] }
+
+[lints.clippy]
+dbg_macro = "warn"
+panic = "warn"
+todo = "warn"
+unwrap_used = "warn"

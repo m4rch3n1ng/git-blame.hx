@@ -36,7 +36,7 @@ impl Custom for Format {}
 
 impl Default for Format {
 	fn default() -> Self {
-		Format::from_str("{author}, {date} • {title} • {hash}").unwrap()
+		Format::from_str("{author}, {date} • {title} • {hash}").expect("should always be valid")
 	}
 }
 
@@ -60,10 +60,10 @@ impl FromStr for Format {
 				}
 
 				if chars.next().is_none() {
-					todo!();
+					return Err(());
 				}
 
-				let variable = Variable::from_str(&variable).unwrap();
+				let variable = Variable::from_str(&variable)?;
 				format.push(Fragment::Variable(variable));
 			} else {
 				verbatim.push(char);
