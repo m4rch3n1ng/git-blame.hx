@@ -1,8 +1,6 @@
 use self::fmt::{Format, Fragment, Variable};
-use std::{
-	str::FromStr,
-	sync::{Arc, Mutex},
-};
+use gix::ThreadSafeRepository;
+use std::{path::Path, str::FromStr};
 use steel::{
 	declare_module,
 	rvals::Custom,
@@ -14,28 +12,33 @@ mod fmt;
 declare_module!(module);
 
 #[derive(Clone)]
-struct GitRepo(Arc<Mutex<gix::Repository>>);
+struct GitRepo(ThreadSafeRepository);
 
 impl Custom for GitRepo {}
 
 impl GitRepo {
 	fn discover() -> Option<Self> {
 		// TODO: pass path
-		let repo = gix::discover(".").ok()?;
-
-		Some(GitRepo(Arc::new(Mutex::new(repo))))
+		let path = Path::new(".").canonicalize().ok()?;
+		let repo = ThreadSafeRepository::discover(path).ok()?;
+		Some(GitRepo(repo))
 	}
 
 	fn blame(self, format: Format, file: &str, line: isize) -> Option<String> {
-		let repo = self.0.lock().ok()?;
+		let repo = self.0.to_thread_local();
 		let head = repo.head().ok()?.peel_to_object().ok()?.id;
 
+		let file = pathdiff::diff_utf8_paths(file, repo.workdir()?.to_str()?)?;
 		let blame = repo
-			.blame_file(file.into(), head, gix::repository::blame_file::Options::default())
+			.blame_file(
+				file.as_str().into(),
+				head,
+				gix::repository::blame_file::Options::default(),
+			)
 			.ok()?;
 
 		let entry = blame.entries.into_iter().find(|blame| {
-			(blame.start_in_source_file..blame.start_in_source_file + blame.len.get())
+			(blame.start_in_blamed_file..blame.start_in_blamed_file + blame.len.get())
 				.contains(&(line as u32))
 		})?;
 		let commit = repo.find_commit(entry.commit_id).ok()?;
