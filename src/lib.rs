@@ -17,9 +17,8 @@ struct GitRepo(ThreadSafeRepository);
 impl Custom for GitRepo {}
 
 impl GitRepo {
-	fn discover() -> Option<Self> {
-		// TODO: pass path
-		let path = Path::new(".").canonicalize().ok()?;
+	fn discover(path: &str) -> Option<Self> {
+		let path = Path::new(path).canonicalize().ok()?;
 		let repo = ThreadSafeRepository::discover(path).ok()?;
 		Some(GitRepo(repo))
 	}

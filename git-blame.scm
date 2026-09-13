@@ -2,14 +2,24 @@
 (require (only-in "helix/static.scm" cx->current-file get-current-line-number current-directory))
 (require (only-in "helix/misc.scm" set-status!))
 
-(define repo (gix::discover))
+(define current-pwd (current-directory))
+(define current-repo (gix::discover current-pwd))
+
+(define (repo)
+  (define pwd (current-directory))
+  (if (equal? pwd current-pwd)
+      current-repo
+      (begin
+        (set! current-pwd pwd)
+        (set! current-repo (gix::discover pwd))
+        current-repo)))
 
 (provide blame/default-format
          blame/format)
 
 (define default-format (blame/default-format))
 (define (blame/line file line #:format [format default-format])
-  (set-status! (gix/blame repo format file line)))
+  (set-status! (gix/blame (repo) format file line)))
 
 (provide blame/line)
 
