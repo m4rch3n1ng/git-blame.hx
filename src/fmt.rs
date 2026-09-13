@@ -1,4 +1,8 @@
-use std::{str::FromStr, sync::Arc};
+use std::{
+	fmt::{Debug, Display},
+	str::FromStr,
+	sync::Arc,
+};
 use steel::rvals::Custom;
 
 #[derive(Clone)]
@@ -18,15 +22,31 @@ pub enum Variable {
 	Date,
 }
 
+#[derive(thiserror::Error)]
+pub enum Error {
+	#[error("unknown variable {0:?}")]
+	UnknownVariable(String),
+	#[error("missing closing '}}'")]
+	UnclosedVariable,
+}
+
+impl Debug for Error {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		Display::fmt(&self, f)
+	}
+}
+
+impl Custom for Error {}
+
 impl FromStr for Variable {
-	type Err = ();
+	type Err = Error;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s {
 			"hash" => Ok(Variable::Hash),
 			"author" => Ok(Variable::Author),
 			"title" => Ok(Variable::Title),
 			"date" => Ok(Variable::Date),
-			_ => Err(()),
+			_ => Err(Error::UnknownVariable(s.to_owned())),
 		}
 	}
 }
@@ -41,7 +61,7 @@ impl Default for Format {
 }
 
 impl FromStr for Format {
-	type Err = ();
+	type Err = Error;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		let mut format = Vec::new();
 
@@ -60,7 +80,7 @@ impl FromStr for Format {
 				}
 
 				if chars.next().is_none() {
-					return Err(());
+					return Err(Error::UnclosedVariable);
 				}
 
 				let variable = Variable::from_str(&variable)?;

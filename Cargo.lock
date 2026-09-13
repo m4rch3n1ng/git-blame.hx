@@ -670,6 +670,7 @@ dependencies = [
  "jiff",
  "pathdiff",
  "steel-core",
+ "thiserror",
 ]
 
 [[package]]
