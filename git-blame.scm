@@ -19,7 +19,10 @@
 
 (define default-format (blame/default-format))
 (define (blame/line file line #:format [format default-format])
-  (set-status! (gix/blame (repo) format file line)))
+  (let ([format (if (string? format)
+                    (blame/format format)
+                    format)])
+    (set-status! (gix/blame (repo) format file line))))
 
 (provide blame/line)
 
