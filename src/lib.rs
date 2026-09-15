@@ -1,6 +1,6 @@
 use self::fmt::{Format, Fragment, Variable};
 use gix::ThreadSafeRepository;
-use std::str::FromStr;
+use std::{borrow::Cow, str::FromStr};
 use steel::{
 	declare_module,
 	rvals::Custom,
@@ -22,22 +22,39 @@ impl GitRepo {
 		Some(GitRepo(repo))
 	}
 
-	fn blame(self, format: Format, file: &str, line: isize) -> Option<String> {
+	fn blame(self, format: Format, file_path: &str, line: isize) -> Option<String> {
 		let repo = self.0.to_thread_local();
 		let head = repo.head().ok()?.peel_to_object().ok()?.id;
 
-		let Ok(file) = repo.normalize_path(file) else {
+		let Ok(file) = repo.normalize_path(file_path) else {
 			return Some("File not in current git repo".to_owned());
 		};
 
-		let blame = repo
-			.blame_file(&file, head, gix::repository::blame_file::Options::default())
-			.ok()?;
+		let start = if let Ok(content) = std::fs::read(file_path) {
+			gix::blame::Start::Contents {
+				first_suspect: head,
+				contents: Cow::Owned(content),
+			}
+		} else {
+			gix::blame::Start::Commit(head)
+		};
+
+		let cache = repo.commit_graph_if_enabled().ok()?;
+		let mut resource_cache = repo.diff_resource_cache_for_tree_diff().ok()?;
+
+		let opts = gix::blame::Options::default();
+		let blame = gix::blame::file(&repo.objects, start, cache, &mut resource_cache, &file, opts).ok()?;
 
 		let entry = blame.entries.into_iter().find(|blame| {
 			(blame.start_in_blamed_file..blame.start_in_blamed_file + blame.len.get())
 				.contains(&(line as u32))
 		})?;
+
+		// gix blame returns a null commit id for uncommited changes
+		if entry.commit_id.is_null() {
+			return Some("Not commited yet".to_owned());
+		}
+
 		let commit = repo.find_commit(entry.commit_id).ok()?;
 
 		let hash = commit.short_id().map(|short| short.to_string());
