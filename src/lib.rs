@@ -55,7 +55,7 @@ impl GitRepo {
 		let date = date.and_then(|date| date.format(gix::date::time::format::SHORT).ok());
 
 		let info = Info {
-			hash: hash.to_string(),
+			hash,
 			author,
 			title,
 			date,
