@@ -101,10 +101,10 @@ fn module() -> FFIModule {
 	let mut module = FFIModule::new("may/git-diff");
 
 	module
-		.register_fn("gix::discover", GitRepo::discover)
-		.register_fn("blame/default-format", Format::default)
-		.register_fn("blame/format", Format::from_str)
-		.register_fn("gix/blame", GitRepo::blame);
+		.register_fn("git-blame::discover", GitRepo::discover)
+		.register_fn("git-blame::blame", GitRepo::blame)
+		.register_fn("git-blame::default-format", Format::default)
+		.register_fn("git-blame::format", Format::from_str);
 
 	module
 }
