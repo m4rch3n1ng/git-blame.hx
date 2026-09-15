@@ -1,6 +1,9 @@
-(#%require-dylib
- "libgit_blame"
- (only-in git-blame::discover git-blame::blame git-blame::default-format git-blame::format))
+(#%require-dylib "libgit_blame"
+                 (only-in git-blame::discover
+                          git-blame::blame
+                          git-blame::default-format
+                          git-blame::format
+                          git-blame::format?))
 (require (only-in "helix/static.scm" cx->current-file get-current-line-number current-directory))
 (require (only-in "helix/misc.scm" set-status!))
 
@@ -18,9 +21,11 @@
 
 (define blame/default-format git-blame::default-format)
 (define blame/format git-blame::format)
+(define blame/format? git-blame::format?)
 
 (provide blame/default-format
-         blame/format)
+         blame/format
+         blame/format?)
 
 (define default-format (git-blame::default-format))
 (define (blame/line file line #:format [format default-format])

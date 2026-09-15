@@ -104,7 +104,8 @@ fn module() -> FFIModule {
 		.register_fn("git-blame::discover", GitRepo::discover)
 		.register_fn("git-blame::blame", GitRepo::blame)
 		.register_fn("git-blame::default-format", Format::default)
-		.register_fn("git-blame::format", Format::from_str);
+		.register_fn("git-blame::format", Format::from_str)
+		.register_fn("git-blame::format?", Format::is_format);
 
 	module
 }

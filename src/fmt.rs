@@ -3,7 +3,10 @@ use std::{
 	str::FromStr,
 	sync::Arc,
 };
-use steel::rvals::Custom;
+use steel::{
+	rvals::Custom,
+	steel_vm::ffi::{FFIArg, FromFFIArg},
+};
 
 #[derive(Clone)]
 pub struct Format(pub Arc<[Fragment]>);
@@ -53,6 +56,12 @@ impl FromStr for Variable {
 
 impl Custom for Fragment {}
 impl Custom for Format {}
+
+impl Format {
+	pub fn is_format(val: FFIArg<'_>) -> bool {
+		Format::from_ffi_arg(val).is_ok()
+	}
+}
 
 impl Default for Format {
 	fn default() -> Self {
