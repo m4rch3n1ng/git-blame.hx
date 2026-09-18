@@ -19,7 +19,7 @@ pub enum Fragment {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Variable {
-	Hash,
+	Commit,
 	Author,
 	Title,
 	Date,
@@ -45,7 +45,7 @@ impl FromStr for Variable {
 	type Err = Error;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		match s {
-			"hash" => Ok(Variable::Hash),
+			"commit" => Ok(Variable::Commit),
 			"author" => Ok(Variable::Author),
 			"title" => Ok(Variable::Title),
 			"date" => Ok(Variable::Date),
@@ -65,7 +65,7 @@ impl Format {
 
 impl Default for Format {
 	fn default() -> Self {
-		Format::from_str("{author}, {date} • {title} • {hash}").expect("should always be valid")
+		Format::from_str("{author}, {date} • {title} • {commit}").expect("should always be valid")
 	}
 }
 

@@ -52,7 +52,7 @@ impl GitRepo {
 		let date = date.and_then(|date| date.format(gix::date::time::format::SHORT).ok());
 
 		let info = Info {
-			hash,
+			commit: hash,
 			author,
 			title,
 			date,
@@ -63,7 +63,7 @@ impl GitRepo {
 }
 
 struct Info {
-	hash: String,
+	commit: String,
 	author: Option<String>,
 	title: Option<String>,
 	date: Option<String>,
@@ -72,7 +72,7 @@ struct Info {
 impl Info {
 	fn get(&self, var: Variable) -> Option<&str> {
 		match var {
-			Variable::Hash => Some(&self.hash),
+			Variable::Commit => Some(&self.commit),
 			Variable::Author => self.author.as_deref(),
 			Variable::Title => self.title.as_deref(),
 			Variable::Date => self.date.as_deref(),
