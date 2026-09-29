@@ -46,10 +46,7 @@ impl GitRepo {
 		let hash = hash.unwrap_or_else(|_| commit.id.to_string());
 
 		let author = commit.author().map(|author| author.name.to_string()).ok();
-
 		let title = commit.message().map(|message| message.title.to_string()).ok();
-		// see <https://github.com/GitoxideLabs/gitoxide/issues/2991>
-		let title = title.map(|title| title.trim().to_owned());
 
 		let date = commit.author().ok().and_then(|author| author.time().ok());
 		let date = date.and_then(|date| date.format(gix::date::time::format::SHORT).ok());
