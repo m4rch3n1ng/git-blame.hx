@@ -1,6 +1,6 @@
 use self::fmt::{Format, Fragment, Variable};
 use gix::ThreadSafeRepository;
-use std::{path::Path, str::FromStr};
+use std::str::FromStr;
 use steel::{
 	declare_module,
 	rvals::Custom,
@@ -18,7 +18,6 @@ impl Custom for GitRepo {}
 
 impl GitRepo {
 	fn discover(path: &str) -> Option<Self> {
-		let path = Path::new(path).canonicalize().ok()?;
 		let repo = ThreadSafeRepository::discover(path).ok()?;
 		Some(GitRepo(repo))
 	}
@@ -27,13 +26,12 @@ impl GitRepo {
 		let repo = self.0.to_thread_local();
 		let head = repo.head().ok()?.peel_to_object().ok()?.id;
 
-		let file = pathdiff::diff_utf8_paths(file, repo.workdir()?.to_str()?)?;
+		let Ok(file) = repo.normalize_path(file) else {
+			return Some("File not in current git repo".to_owned());
+		};
+
 		let blame = repo
-			.blame_file(
-				file.as_str().into(),
-				head,
-				gix::repository::blame_file::Options::default(),
-			)
+			.blame_file(&file, head, gix::repository::blame_file::Options::default())
 			.ok()?;
 
 		let entry = blame.entries.into_iter().find(|blame| {
